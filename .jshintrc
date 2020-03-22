@@ -17,5 +17,5 @@
 	"futurehostile": true,
 	"varstmt": true,
 	"esversion": 6,
-	"predef": ["Vue", "axios", "app", "timetrack"]
+	"predef": ["Vue", "axios", "app", "dogClub"]
 }

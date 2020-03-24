@@ -2,7 +2,7 @@
 <div class="game_board">
 
 	<svg width="100%" height="100%" id="board24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1170 1170"
-		:class="'player_' + player.color[0]">
+		:class="'player_' + player.color">
 		<title>castle-board</title>
 		<!-- START WALL HOLES -->
 		<ellipse
@@ -33,7 +33,7 @@
 
 <script>
 export default {
-	props: ['player', 'boardData', 'board', 'deck'],
+	props: ['player', 'boardData', 'board', 'deck', 'helpers'],
 	data () {
 		return {
 			//
@@ -47,8 +47,6 @@ export default {
 			let self = this;
 			let pinHole = $(event.target);
 
-
-
 			if(pinHole.hasClass('move')){
 				self.runMove(pinHole);
 			} else if (pinHole.hasClass('focused')) {
@@ -56,7 +54,7 @@ export default {
 				self.board.moveOptions = {};
 			} else if (pinHole.hasClass('active')) {
 
-				if(pinHole.hasClass(self.player.color[0]) || pinHole.hasClass(self.player.color[1])) {
+				if(pinHole.hasClass(self.player.color) || pinHole.hasClass(self.player.color[1])) {
 					if (pinHole.hasClass('home_pinhole')) {
 					} else {
 						self.showPossibleMoves(pinHole);
@@ -250,7 +248,7 @@ export default {
 			let startPinId = origMovePin.from;
 			let startPin = self.board.pins[startPinId];
 
-			let defaultHomePinHoleColors = {
+			const defaultHomePinHoleColors = {
 				1: 'red',
 				16: 'green',
 				31: 'orange',
@@ -315,8 +313,8 @@ export default {
 			self.board.moveOptions = {};
 			self.deck.picked = null;
 			self.board.currentStepInfo = "Pick Card from Hand!";
+			self.helpers.playerTurnFinished(self.player);
 		}
-
 	}
 
 }
@@ -337,10 +335,12 @@ $move-color: #fff;
 	position: relative;
 	// height: 80vh;
 	padding: .66rem;
-	min-height: 650px;
-	min-width: 650px;
+	min-height: 320px;
+	min-width: 320px;
 
 	svg {
+		transition: transform .42s;
+
 		&.player_red {
 			transform: rotate(0deg);
 		}

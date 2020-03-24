@@ -1,6 +1,7 @@
 <template>
 	<div class="d-flex justify-content-center">
 		<div class="deck-box"
+			v-if="deck.cards.length > 0"
 			v-bind:class="{
 				'six-cards': deck.cards.length >= 6,
 				'five-cards': deck.cards.length === 5,
@@ -17,12 +18,15 @@
 					v-bind:class="{ active: deck.picked != null && deck.picked.id === card.id }"
 				v-on:click="pickCard(card)">
 		</div>
+		<div class="actions">
+			<button type="button" name="button" @click="cantMove();">Can't Move!</button>
+		</div>
 	</div>
 </template>
 
 <script>
 export default {
-	props: ['player', 'board', 'deck'],
+	props: ['player', 'board', 'deck', 'helpers'],
 	data () {
 		return {
 			//
@@ -57,11 +61,7 @@ export default {
 				blue: 46
 			}
 			let moves = {};
-			moves[defaultHomePinHoles[self.player.color[0]]] = {
-				from: 0,
-				move: true
-			};
-			moves[defaultHomePinHoles[self.player.color[1]]] = {
+			moves[defaultHomePinHoles[self.player.color]] = {
 				from: 0,
 				move: true
 			};
@@ -71,17 +71,31 @@ export default {
 		preCheckOptions: function() {
 			let self = this;
 			console.log("Precheck");
-			let check = '.active.' + self.player.color[0] +', .active.' + self.player.color[1];
+			let check = '.active.' + self.player.color +', .active.' + self.player.color[1];
 			let elements = $(check);
 			if (elements.length === 1) {
 				elements.trigger('click');
 			}
+		},
+		cantMove: function() {
+			let self = this;
+			console.log('cantMove');
+
+			self.deck.cards = [];
+			self.helpers.playerTurnFinished(self.player);
 		}
 	}
 }
 </script>
 
 <style lang="scss">
+	.actions {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		padding: .66rem;
+	}
+
 	.deck-box {
 		display: inline-flex;
 		margin-top: 2.33rem;
@@ -94,6 +108,8 @@ export default {
 			border-radius: 8px;
 			box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
 			transition: all .25s;
+			height: 312px;
+			width: 209px;
 
 			user-drag: none;
 			user-select: none;

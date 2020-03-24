@@ -1910,6 +1910,20 @@ module.exports = {
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _modules_Board_vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./modules/Board.vue */ "./resources/js/components/modules/Board.vue");
 /* harmony import */ var _modules_Deck_vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./modules/Deck.vue */ "./resources/js/components/modules/Deck.vue");
+function _createForOfIteratorHelper(o) { if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (o = _unsupportedIterableToArray(o))) { var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var it, normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(n); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) return _arrayLikeToArray(arr); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
 //
 //
 //
@@ -1920,9 +1934,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 var BoardData = {
-  coords: null
+  coords: null,
+  deck: null
 };
 BoardData.coords = __webpack_require__(/*! ./data/boarddata.js */ "./resources/js/components/data/boarddata.js").getBoardDataCoords();
+BoardData.deck = __webpack_require__(/*! ./data/deck.js */ "./resources/js/components/data/deck.js")["default"];
 console.log(BoardData);
 /* harmony default export */ __webpack_exports__["default"] = ({
   name: 'DogClub',
@@ -1931,6 +1947,7 @@ console.log(BoardData);
     deckBox: _modules_Deck_vue__WEBPACK_IMPORTED_MODULE_1__["default"]
   },
   data: function data() {
+    var self = this;
     return {
       boardData: BoardData,
       board: {
@@ -1940,43 +1957,154 @@ console.log(BoardData);
         moveOptions: {},
         holdingWalls: {}
       },
-      deck: {
-        cards: [{
-          id: "spades_ace",
-          value: 'A',
-          moves: ['out', 1, 11]
-        }, {
-          id: "hearts_king",
-          value: 'K',
-          moves: ['out', 13]
-        }, {
-          id: "spades_jack",
-          value: 'B',
-          moves: ['swap']
-        }, {
-          id: "diamonds_six",
-          value: '6',
-          moves: [6]
-        }, {
-          id: "hearts_seven",
-          value: '7',
-          moves: [1, 2, 3, 4, 5, 6, 7]
-        }, {
-          id: "clubs_four",
-          value: '4',
-          moves: [-4, 4]
-        }],
-        picked: null
+      cards: null,
+      decks: {
+        red: {
+          cards: [],
+          picked: null
+        },
+        green: {
+          cards: [],
+          picked: null
+        },
+        orange: {
+          cards: [],
+          picked: null
+        },
+        blue: {
+          cards: [],
+          picked: null
+        }
       },
+      round: 0,
+      cardsToGive: 6,
+      players: ['red', 'green', 'orange', 'blue'],
+      startingPlayer: 1,
+      turnPlayer: 1,
       player: {
-        color: ['red', 'orange']
+        color: 'red'
+      },
+      helpers: {
+        playerTurnFinished: function playerTurnFinished(player) {
+          console.log('playerTurnFinished', player.color);
+
+          if (self.isRoundOver()) {
+            console.log('Round IS Over');
+            self.giveCards(self.cardsToGive, self.startingPlayer);
+          } else {
+            console.log('Round NOT Over');
+            self.nextPlayersTurn();
+          } // HACK: remove this that is a SOLO mode hack
+
+
+          self.player.color = self.players[self.turnPlayer];
+          return;
+        }
       }
     };
   },
   mounted: function mounted() {
+    var self = this;
     console.log('#Root Mounted');
+    self.initNewGame();
   },
-  methods: {//
+  methods: {
+    initNewGame: function initNewGame() {
+      var self = this;
+      console.log('initNewGame');
+      self.startingPlayer = Math.floor(Math.random() * 4);
+      self.turnPlayer = self.startingPlayer; // HACK: remove()
+
+      self.player.color = self.players[self.turnPlayer];
+      self.cards = self.shuffle(self.boardData.deck);
+      self.giveCards(self.cardsToGive, self.startingPlayer);
+    },
+    shuffle: function shuffle(array) {
+      var currentIndex = array.length,
+          temporaryValue,
+          randomIndex; // While there remain elements to shuffle...
+
+      while (0 !== currentIndex) {
+        // Pick a remaining element...
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex -= 1; // And swap it with the current element.
+
+        temporaryValue = array[currentIndex];
+        array[currentIndex] = array[randomIndex];
+        array[randomIndex] = temporaryValue;
+      }
+
+      return _toConsumableArray(array);
+    },
+    giveCards: function giveCards(count, startWith) {
+      var self = this;
+      console.log('giving Cards', count, startWith);
+      var currentPlayer = startWith;
+      self.turnPlayer = currentPlayer;
+
+      for (var runIndex = 0; runIndex < count; runIndex++) {
+        console.log('run', runIndex);
+
+        var _iterator = _createForOfIteratorHelper(self.players),
+            _step;
+
+        try {
+          for (_iterator.s(); !(_step = _iterator.n()).done;) {
+            var player = _step.value;
+            self.giveCardToPlayer(currentPlayer);
+            currentPlayer = currentPlayer + 1 < 4 ? currentPlayer + 1 : 0;
+          }
+        } catch (err) {
+          _iterator.e(err);
+        } finally {
+          _iterator.f();
+        }
+      }
+
+      self.startingPlayer = self.startingPlayer + 1 < 4 ? self.startingPlayer + 1 : 0;
+      self.cardsToGive = self.cardsToGive - 1 > 1 ? self.cardsToGive - 1 : 5;
+      self.round++;
+    },
+    giveCardToPlayer: function giveCardToPlayer(player) {
+      var self = this;
+      console.log('giveCardToPlayer', self.players[player]);
+      var color = self.players[player];
+      self.decks[color].cards.push(self.cards[0]);
+      self.cards.shift();
+
+      if (self.cards.length === 0) {
+        self.cards = self.shuffle(self.boardData.deck);
+      }
+    },
+    isRoundOver: function isRoundOver() {
+      var self = this;
+      console.log('checkIfRoundIsOver');
+      var isOver = true;
+
+      if (self.decks.red.cards.length > 0) {
+        isOver = false;
+      } else if (self.decks.green.cards.length > 0) {
+        isOver = false;
+      } else if (self.decks.orange.cards.length > 0) {
+        isOver = false;
+      } else if (self.decks.blue.cards.length > 0) {
+        isOver = false;
+      }
+
+      return isOver;
+    },
+    nextPlayersTurn: function nextPlayersTurn() {
+      var self = this;
+      console.log('nextPlayersTurn');
+      self.turnPlayer = self.turnPlayer + 1 < 4 ? self.turnPlayer + 1 : 0;
+
+      if (self.decks[self.players[self.turnPlayer]].cards.length == 0) {
+        self.nextPlayersTurn();
+        return;
+      }
+
+      ;
+    }
   }
 });
 
@@ -2025,7 +2153,7 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 /* harmony default export */ __webpack_exports__["default"] = ({
-  props: ['player', 'boardData', 'board', 'deck'],
+  props: ['player', 'boardData', 'board', 'deck', 'helpers'],
   data: function data() {
     return {//
     };
@@ -2044,7 +2172,7 @@ __webpack_require__.r(__webpack_exports__);
         self.board.focusedPin = null;
         self.board.moveOptions = {};
       } else if (pinHole.hasClass('active')) {
-        if (pinHole.hasClass(self.player.color[0]) || pinHole.hasClass(self.player.color[1])) {
+        if (pinHole.hasClass(self.player.color) || pinHole.hasClass(self.player.color[1])) {
           if (pinHole.hasClass('home_pinhole')) {} else {
             self.showPossibleMoves(pinHole);
           }
@@ -2307,6 +2435,7 @@ __webpack_require__.r(__webpack_exports__);
       self.board.moveOptions = {};
       self.deck.picked = null;
       self.board.currentStepInfo = "Pick Card from Hand!";
+      self.helpers.playerTurnFinished(self.player);
     }
   }
 });
@@ -2344,8 +2473,12 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
-  props: ['player', 'board', 'deck'],
+  props: ['player', 'board', 'deck', 'helpers'],
   data: function data() {
     return {//
     };
@@ -2381,11 +2514,7 @@ __webpack_require__.r(__webpack_exports__);
         blue: 46
       };
       var moves = {};
-      moves[defaultHomePinHoles[self.player.color[0]]] = {
-        from: 0,
-        move: true
-      };
-      moves[defaultHomePinHoles[self.player.color[1]]] = {
+      moves[defaultHomePinHoles[self.player.color]] = {
         from: 0,
         move: true
       };
@@ -2394,12 +2523,18 @@ __webpack_require__.r(__webpack_exports__);
     preCheckOptions: function preCheckOptions() {
       var self = this;
       console.log("Precheck");
-      var check = '.active.' + self.player.color[0] + ', .active.' + self.player.color[1];
+      var check = '.active.' + self.player.color + ', .active.' + self.player.color[1];
       var elements = $(check);
 
       if (elements.length === 1) {
         elements.trigger('click');
       }
+    },
+    cantMove: function cantMove() {
+      var self = this;
+      console.log('cantMove');
+      self.deck.cards = [];
+      self.helpers.playerTurnFinished(self.player);
     }
   }
 });
@@ -6949,7 +7084,7 @@ exports = module.exports = __webpack_require__(/*! ../../../node_modules/css-loa
 
 
 // module
-exports.push([module.i, "html, body {\n  width: 100vw;\n  height: 100vh;\n  max-width: 100vw;\n  max-height: 100vh;\n  margin: 0;\n  overflow: hidden;\n}\nbody {\n  background: radial-gradient(black 15%, transparent 16%) 0 0, radial-gradient(black 15%, transparent 16%) 8px 8px, radial-gradient(rgba(255, 255, 255, 0.1) 15%, transparent 20%) 0 1px, radial-gradient(rgba(255, 255, 255, 0.1) 15%, transparent 20%) 8px 9px;\n  background-color: #282828;\n  background-size: 16px 16px;\n}\n.game-grid {\n  height: calc(100vh - 55px);\n  display: grid;\n  grid-template-columns: 1fr;\n  grid-template-rows: 8fr 2fr;\n  grid-column-gap: 0px;\n  grid-row-gap: 0px;\n}", ""]);
+exports.push([module.i, "html, body {\n  width: 100vw;\n  height: 100vh;\n  max-width: 100vw;\n  max-height: 100vh;\n  margin: 0;\n  overflow: hidden;\n}\nbody {\n  background: radial-gradient(black 15%, transparent 16%) 0 0, radial-gradient(black 15%, transparent 16%) 8px 8px, radial-gradient(rgba(255, 255, 255, 0.1) 15%, transparent 20%) 0 1px, radial-gradient(rgba(255, 255, 255, 0.1) 15%, transparent 20%) 8px 9px;\n  background-color: #282828;\n  background-size: 16px 16px;\n}\n.game-grid {\n  height: calc(100vh - 55px);\n  display: grid;\n  grid-template-columns: 1fr;\n  grid-template-rows: 80% 20%;\n  grid-column-gap: 0;\n  grid-row-gap: 0;\n}", ""]);
 
 // exports
 
@@ -6968,7 +7103,7 @@ exports = module.exports = __webpack_require__(/*! ../../../../node_modules/css-
 
 
 // module
-exports.push([module.i, ".game_board {\n  position: relative;\n  padding: 0.66rem;\n  min-height: 650px;\n  min-width: 650px;\n}\n.game_board svg.player_red {\n  transform: rotate(0deg);\n}\n.game_board svg.player_green {\n  transform: rotate(90deg);\n}\n.game_board svg.player_orange {\n  transform: rotate(180deg);\n}\n.game_board svg.player_blue {\n  transform: rotate(270deg);\n}\n.game_board .pinhole {\n  cursor: pointer;\n  stroke: #616161;\n  fill: #353535bf;\n  stroke-miterlimit: 6;\n  stroke-width: 6px;\n}\n.game_board .pinhole.cls-1, .game_board .pinhole.red_home-1, .game_board .pinhole.red_home-2, .game_board .pinhole.red_home-3, .game_board .pinhole.red_home-4 {\n  stroke: #900b10;\n}\n.game_board .pinhole.cls-1:hover, .game_board .pinhole.red_home-1:hover, .game_board .pinhole.red_home-2:hover, .game_board .pinhole.red_home-3:hover, .game_board .pinhole.red_home-4:hover {\n  stroke: #a80d13 !important;\n}\n.game_board .pinhole.cls-16, .game_board .pinhole.green_home-1, .game_board .pinhole.green_home-2, .game_board .pinhole.green_home-3, .game_board .pinhole.green_home-4 {\n  stroke: #056733;\n}\n.game_board .pinhole.cls-16:hover, .game_board .pinhole.green_home-1:hover, .game_board .pinhole.green_home-2:hover, .game_board .pinhole.green_home-3:hover, .game_board .pinhole.green_home-4:hover {\n  stroke: #067f3f !important;\n}\n.game_board .pinhole.cls-31, .game_board .pinhole.orange_home-1, .game_board .pinhole.orange_home-2, .game_board .pinhole.orange_home-3, .game_board .pinhole.orange_home-4 {\n  stroke: #b94d1a;\n}\n.game_board .pinhole.cls-31:hover, .game_board .pinhole.orange_home-1:hover, .game_board .pinhole.orange_home-2:hover, .game_board .pinhole.orange_home-3:hover, .game_board .pinhole.orange_home-4:hover {\n  stroke: #cf561d !important;\n}\n.game_board .pinhole.cls-46, .game_board .pinhole.blue_home-1, .game_board .pinhole.blue_home-2, .game_board .pinhole.blue_home-3, .game_board .pinhole.blue_home-4 {\n  stroke: #044bb5;\n}\n.game_board .pinhole.cls-46:hover, .game_board .pinhole.blue_home-1:hover, .game_board .pinhole.blue_home-2:hover, .game_board .pinhole.blue_home-3:hover, .game_board .pinhole.blue_home-4:hover {\n  stroke: #0555ce !important;\n}\n.game_board .pinhole:hover {\n  stroke: #7b7b7b;\n}\n.game_board .pinhole.active.red {\n  fill: #900b10;\n}\n.game_board .pinhole.active.red:hover {\n  stroke: #78090d;\n}\n.game_board .pinhole.active.green {\n  fill: #056733;\n}\n.game_board .pinhole.active.green:hover {\n  stroke: #044f27;\n}\n.game_board .pinhole.active.orange {\n  fill: #b94d1a;\n}\n.game_board .pinhole.active.orange:hover {\n  stroke: #a34417;\n}\n.game_board .pinhole.active.blue {\n  fill: #044bb5;\n}\n.game_board .pinhole.active.blue:hover {\n  stroke: #03419c;\n}\n.game_board .pinhole.route {\n  stroke: #855A3E;\n  opacity: 0.6;\n}\n.game_board .pinhole.move {\n  stroke: #fff !important;\n  stroke-width: 10px;\n  stroke-miterlimit: 5;\n}\n.game_board .pinhole.wall {\n  stroke-width: 2px;\n  stroke-miterlimit: 0;\n}\n.game_board .pinhole.focused {\n  stroke-width: 10px;\n  stroke-miterlimit: 5;\n}\n.game_board .pinhole.focused.red {\n  stroke: #78090d !important;\n  fill: #61070b;\n}\n.game_board .pinhole.focused.green {\n  stroke: #044f27 !important;\n  fill: #03361b;\n}\n.game_board .pinhole.focused.orange {\n  stroke: #a34417 !important;\n  fill: #8c3a14;\n}\n.game_board .pinhole.focused.blue {\n  stroke: #03419c !important;\n  fill: #033683;\n}\n.game_board .move_info {\n  position: absolute;\n  display: flex;\n  flex-flow: column;\n  flex-wrap: wrap;\n  height: 220px;\n  width: 220px;\n  top: calc(50% - 110px);\n  left: calc(50% - 110px);\n  text-align: center;\n  justify-content: center;\n  font-size: 120%;\n  color: #fff;\n}\n.game_board .move_info span {\n  align-self: center;\n}", ""]);
+exports.push([module.i, ".game_board {\n  position: relative;\n  padding: 0.66rem;\n  min-height: 320px;\n  min-width: 320px;\n}\n.game_board svg {\n  transition: transform 0.42s;\n}\n.game_board svg.player_red {\n  transform: rotate(0deg);\n}\n.game_board svg.player_green {\n  transform: rotate(90deg);\n}\n.game_board svg.player_orange {\n  transform: rotate(180deg);\n}\n.game_board svg.player_blue {\n  transform: rotate(270deg);\n}\n.game_board .pinhole {\n  cursor: pointer;\n  stroke: #616161;\n  fill: #353535bf;\n  stroke-miterlimit: 6;\n  stroke-width: 6px;\n}\n.game_board .pinhole.cls-1, .game_board .pinhole.red_home-1, .game_board .pinhole.red_home-2, .game_board .pinhole.red_home-3, .game_board .pinhole.red_home-4 {\n  stroke: #900b10;\n}\n.game_board .pinhole.cls-1:hover, .game_board .pinhole.red_home-1:hover, .game_board .pinhole.red_home-2:hover, .game_board .pinhole.red_home-3:hover, .game_board .pinhole.red_home-4:hover {\n  stroke: #a80d13 !important;\n}\n.game_board .pinhole.cls-16, .game_board .pinhole.green_home-1, .game_board .pinhole.green_home-2, .game_board .pinhole.green_home-3, .game_board .pinhole.green_home-4 {\n  stroke: #056733;\n}\n.game_board .pinhole.cls-16:hover, .game_board .pinhole.green_home-1:hover, .game_board .pinhole.green_home-2:hover, .game_board .pinhole.green_home-3:hover, .game_board .pinhole.green_home-4:hover {\n  stroke: #067f3f !important;\n}\n.game_board .pinhole.cls-31, .game_board .pinhole.orange_home-1, .game_board .pinhole.orange_home-2, .game_board .pinhole.orange_home-3, .game_board .pinhole.orange_home-4 {\n  stroke: #b94d1a;\n}\n.game_board .pinhole.cls-31:hover, .game_board .pinhole.orange_home-1:hover, .game_board .pinhole.orange_home-2:hover, .game_board .pinhole.orange_home-3:hover, .game_board .pinhole.orange_home-4:hover {\n  stroke: #cf561d !important;\n}\n.game_board .pinhole.cls-46, .game_board .pinhole.blue_home-1, .game_board .pinhole.blue_home-2, .game_board .pinhole.blue_home-3, .game_board .pinhole.blue_home-4 {\n  stroke: #044bb5;\n}\n.game_board .pinhole.cls-46:hover, .game_board .pinhole.blue_home-1:hover, .game_board .pinhole.blue_home-2:hover, .game_board .pinhole.blue_home-3:hover, .game_board .pinhole.blue_home-4:hover {\n  stroke: #0555ce !important;\n}\n.game_board .pinhole:hover {\n  stroke: #7b7b7b;\n}\n.game_board .pinhole.active.red {\n  fill: #900b10;\n}\n.game_board .pinhole.active.red:hover {\n  stroke: #78090d;\n}\n.game_board .pinhole.active.green {\n  fill: #056733;\n}\n.game_board .pinhole.active.green:hover {\n  stroke: #044f27;\n}\n.game_board .pinhole.active.orange {\n  fill: #b94d1a;\n}\n.game_board .pinhole.active.orange:hover {\n  stroke: #a34417;\n}\n.game_board .pinhole.active.blue {\n  fill: #044bb5;\n}\n.game_board .pinhole.active.blue:hover {\n  stroke: #03419c;\n}\n.game_board .pinhole.route {\n  stroke: #855A3E;\n  opacity: 0.6;\n}\n.game_board .pinhole.move {\n  stroke: #fff !important;\n  stroke-width: 10px;\n  stroke-miterlimit: 5;\n}\n.game_board .pinhole.wall {\n  stroke-width: 2px;\n  stroke-miterlimit: 0;\n}\n.game_board .pinhole.focused {\n  stroke-width: 10px;\n  stroke-miterlimit: 5;\n}\n.game_board .pinhole.focused.red {\n  stroke: #78090d !important;\n  fill: #61070b;\n}\n.game_board .pinhole.focused.green {\n  stroke: #044f27 !important;\n  fill: #03361b;\n}\n.game_board .pinhole.focused.orange {\n  stroke: #a34417 !important;\n  fill: #8c3a14;\n}\n.game_board .pinhole.focused.blue {\n  stroke: #03419c !important;\n  fill: #033683;\n}\n.game_board .move_info {\n  position: absolute;\n  display: flex;\n  flex-flow: column;\n  flex-wrap: wrap;\n  height: 220px;\n  width: 220px;\n  top: calc(50% - 110px);\n  left: calc(50% - 110px);\n  text-align: center;\n  justify-content: center;\n  font-size: 120%;\n  color: #fff;\n}\n.game_board .move_info span {\n  align-self: center;\n}", ""]);
 
 // exports
 
@@ -6987,7 +7122,7 @@ exports = module.exports = __webpack_require__(/*! ../../../../node_modules/css-
 
 
 // module
-exports.push([module.i, ".deck-box {\n  display: inline-flex;\n  margin-top: 2.33rem;\n  position: relative;\n  margin-left: 55%;\n}\n.deck-box .deck-card {\n  cursor: pointer;\n  position: relative;\n  border-radius: 8px;\n  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);\n  transition: all 0.25s;\n  user-drag: none;\n  user-select: none;\n  -moz-user-select: none;\n  -webkit-user-drag: none;\n  -webkit-user-select: none;\n  -ms-user-select: none;\n}\n.deck-box .deck-card:hover {\n  top: 20px !important;\n  box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);\n}\n.deck-box .deck-card.active, .deck-box .deck-card:active {\n  top: -20px !important;\n  box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);\n}\n.deck-box.six-cards .deck-card:nth-child(1) {\n  top: 60px;\n  transform: rotate(-16deg);\n}\n.deck-box.six-cards .deck-card:nth-child(1):hover, .deck-box.six-cards .deck-card:nth-child(1).active {\n  transform: rotate(-16deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(2) {\n  top: 53px;\n  left: -150px;\n  transform: rotate(-8deg);\n}\n.deck-box.six-cards .deck-card:nth-child(2):hover, .deck-box.six-cards .deck-card:nth-child(2).active {\n  transform: rotate(-8deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(3) {\n  top: 45px;\n  left: -300px;\n  transform: rotate(-4deg);\n}\n.deck-box.six-cards .deck-card:nth-child(3):hover, .deck-box.six-cards .deck-card:nth-child(3).active {\n  transform: rotate(-4deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(4) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(4deg);\n}\n.deck-box.six-cards .deck-card:nth-child(4):hover, .deck-box.six-cards .deck-card:nth-child(4).active {\n  transform: rotate(4deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(5) {\n  top: 50px;\n  left: -600px;\n  transform: rotate(10deg);\n}\n.deck-box.six-cards .deck-card:nth-child(5):hover, .deck-box.six-cards .deck-card:nth-child(5).active {\n  transform: rotate(10deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(6) {\n  top: 65px;\n  left: -750px;\n  transform: rotate(16deg);\n}\n.deck-box.six-cards .deck-card:nth-child(6):hover, .deck-box.six-cards .deck-card:nth-child(6).active {\n  transform: rotate(16deg) scale(1.05);\n}\n.deck-box.five-cards {\n  margin-left: 47%;\n}\n.deck-box.five-cards .deck-card:nth-child(1) {\n  top: 50px;\n  transform: rotate(-12deg);\n}\n.deck-box.five-cards .deck-card:nth-child(1):hover, .deck-box.five-cards .deck-card:nth-child(1).active {\n  transform: rotate(-16deg) scale(1.05);\n}\n.deck-box.five-cards .deck-card:nth-child(2) {\n  top: 45px;\n  left: -150px;\n  transform: rotate(-4deg);\n}\n.deck-box.five-cards .deck-card:nth-child(2):hover, .deck-box.five-cards .deck-card:nth-child(2).active {\n  transform: rotate(-8deg) scale(1.05);\n}\n.deck-box.five-cards .deck-card:nth-child(3) {\n  top: 40px;\n  left: -300px;\n  transform: rotate(0deg);\n}\n.deck-box.five-cards .deck-card:nth-child(3):hover, .deck-box.five-cards .deck-card:nth-child(3).active {\n  transform: rotate(0deg) scale(1.05);\n}\n.deck-box.five-cards .deck-card:nth-child(4) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(8deg);\n}\n.deck-box.five-cards .deck-card:nth-child(4):hover, .deck-box.five-cards .deck-card:nth-child(4).active {\n  transform: rotate(8deg) scale(1.05);\n}\n.deck-box.five-cards .deck-card:nth-child(5) {\n  top: 55px;\n  left: -600px;\n  transform: rotate(16deg);\n}\n.deck-box.five-cards .deck-card:nth-child(5):hover, .deck-box.five-cards .deck-card:nth-child(5).active {\n  transform: rotate(16deg) scale(1.05);\n}\n.deck-box.four-cards {\n  margin-left: 56%;\n}\n.deck-box.four-cards .deck-card:nth-child(1) {\n  top: 53px;\n  left: -150px;\n  transform: rotate(-8deg);\n}\n.deck-box.four-cards .deck-card:nth-child(1):hover, .deck-box.four-cards .deck-card:nth-child(1).active {\n  transform: rotate(-8deg) scale(1.05);\n}\n.deck-box.four-cards .deck-card:nth-child(2) {\n  top: 45px;\n  left: -300px;\n  transform: rotate(-4deg);\n}\n.deck-box.four-cards .deck-card:nth-child(2):hover, .deck-box.four-cards .deck-card:nth-child(2).active {\n  transform: rotate(-4deg) scale(1.05);\n}\n.deck-box.four-cards .deck-card:nth-child(3) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(4deg);\n}\n.deck-box.four-cards .deck-card:nth-child(3):hover, .deck-box.four-cards .deck-card:nth-child(3).active {\n  transform: rotate(4deg) scale(1.05);\n}\n.deck-box.four-cards .deck-card:nth-child(4) {\n  top: 50px;\n  left: -600px;\n  transform: rotate(10deg);\n}\n.deck-box.four-cards .deck-card:nth-child(4):hover, .deck-box.four-cards .deck-card:nth-child(4).active {\n  transform: rotate(10deg) scale(1.05);\n}\n.deck-box.three-cards {\n  margin-left: 47%;\n}\n.deck-box.three-cards .deck-card:nth-child(1) {\n  top: 45px;\n  left: -150px;\n  transform: rotate(-4deg);\n}\n.deck-box.three-cards .deck-card:nth-child(1):hover, .deck-box.three-cards .deck-card:nth-child(1).active {\n  transform: rotate(-8deg) scale(1.05);\n}\n.deck-box.three-cards .deck-card:nth-child(2) {\n  top: 40px;\n  left: -300px;\n  transform: rotate(0deg);\n}\n.deck-box.three-cards .deck-card:nth-child(2):hover, .deck-box.three-cards .deck-card:nth-child(2).active {\n  transform: rotate(0deg) scale(1.05);\n}\n.deck-box.three-cards .deck-card:nth-child(3) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(8deg);\n}\n.deck-box.three-cards .deck-card:nth-child(3):hover, .deck-box.three-cards .deck-card:nth-child(3).active {\n  transform: rotate(8deg) scale(1.05);\n}\n.deck-box.two-cards {\n  margin-left: 57%;\n}\n.deck-box.two-cards .deck-card:nth-child(1) {\n  top: 45px;\n  left: -300px;\n  transform: rotate(-4deg);\n}\n.deck-box.two-cards .deck-card:nth-child(1):hover, .deck-box.two-cards .deck-card:nth-child(1).active {\n  transform: rotate(-4deg) scale(1.05);\n}\n.deck-box.two-cards .deck-card:nth-child(2) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(4deg);\n}\n.deck-box.two-cards .deck-card:nth-child(2):hover, .deck-box.two-cards .deck-card:nth-child(2).active {\n  transform: rotate(4deg) scale(1.05);\n}\n.deck-box.one-cards {\n  margin-left: 45%;\n}\n.deck-box.one-cards .deck-card:nth-child(1) {\n  top: 45px;\n  left: -300px;\n  transform: rotate(0deg);\n}\n.deck-box.one-cards .deck-card:nth-child(1):hover, .deck-box.one-cards .deck-card:nth-child(1).active {\n  transform: rotate(0deg) scale(1.05);\n}", ""]);
+exports.push([module.i, ".actions {\n  position: absolute;\n  left: 0;\n  bottom: 0;\n  padding: 0.66rem;\n}\n.deck-box {\n  display: inline-flex;\n  margin-top: 2.33rem;\n  position: relative;\n  margin-left: 55%;\n}\n.deck-box .deck-card {\n  cursor: pointer;\n  position: relative;\n  border-radius: 8px;\n  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);\n  transition: all 0.25s;\n  height: 312px;\n  width: 209px;\n  user-drag: none;\n  user-select: none;\n  -moz-user-select: none;\n  -webkit-user-drag: none;\n  -webkit-user-select: none;\n  -ms-user-select: none;\n}\n.deck-box .deck-card:hover {\n  top: 20px !important;\n  box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);\n}\n.deck-box .deck-card.active, .deck-box .deck-card:active {\n  top: -20px !important;\n  box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);\n}\n.deck-box.six-cards .deck-card:nth-child(1) {\n  top: 60px;\n  transform: rotate(-16deg);\n}\n.deck-box.six-cards .deck-card:nth-child(1):hover, .deck-box.six-cards .deck-card:nth-child(1).active {\n  transform: rotate(-16deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(2) {\n  top: 53px;\n  left: -150px;\n  transform: rotate(-8deg);\n}\n.deck-box.six-cards .deck-card:nth-child(2):hover, .deck-box.six-cards .deck-card:nth-child(2).active {\n  transform: rotate(-8deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(3) {\n  top: 45px;\n  left: -300px;\n  transform: rotate(-4deg);\n}\n.deck-box.six-cards .deck-card:nth-child(3):hover, .deck-box.six-cards .deck-card:nth-child(3).active {\n  transform: rotate(-4deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(4) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(4deg);\n}\n.deck-box.six-cards .deck-card:nth-child(4):hover, .deck-box.six-cards .deck-card:nth-child(4).active {\n  transform: rotate(4deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(5) {\n  top: 50px;\n  left: -600px;\n  transform: rotate(10deg);\n}\n.deck-box.six-cards .deck-card:nth-child(5):hover, .deck-box.six-cards .deck-card:nth-child(5).active {\n  transform: rotate(10deg) scale(1.05);\n}\n.deck-box.six-cards .deck-card:nth-child(6) {\n  top: 65px;\n  left: -750px;\n  transform: rotate(16deg);\n}\n.deck-box.six-cards .deck-card:nth-child(6):hover, .deck-box.six-cards .deck-card:nth-child(6).active {\n  transform: rotate(16deg) scale(1.05);\n}\n.deck-box.five-cards {\n  margin-left: 47%;\n}\n.deck-box.five-cards .deck-card:nth-child(1) {\n  top: 50px;\n  transform: rotate(-12deg);\n}\n.deck-box.five-cards .deck-card:nth-child(1):hover, .deck-box.five-cards .deck-card:nth-child(1).active {\n  transform: rotate(-16deg) scale(1.05);\n}\n.deck-box.five-cards .deck-card:nth-child(2) {\n  top: 45px;\n  left: -150px;\n  transform: rotate(-4deg);\n}\n.deck-box.five-cards .deck-card:nth-child(2):hover, .deck-box.five-cards .deck-card:nth-child(2).active {\n  transform: rotate(-8deg) scale(1.05);\n}\n.deck-box.five-cards .deck-card:nth-child(3) {\n  top: 40px;\n  left: -300px;\n  transform: rotate(0deg);\n}\n.deck-box.five-cards .deck-card:nth-child(3):hover, .deck-box.five-cards .deck-card:nth-child(3).active {\n  transform: rotate(0deg) scale(1.05);\n}\n.deck-box.five-cards .deck-card:nth-child(4) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(8deg);\n}\n.deck-box.five-cards .deck-card:nth-child(4):hover, .deck-box.five-cards .deck-card:nth-child(4).active {\n  transform: rotate(8deg) scale(1.05);\n}\n.deck-box.five-cards .deck-card:nth-child(5) {\n  top: 55px;\n  left: -600px;\n  transform: rotate(16deg);\n}\n.deck-box.five-cards .deck-card:nth-child(5):hover, .deck-box.five-cards .deck-card:nth-child(5).active {\n  transform: rotate(16deg) scale(1.05);\n}\n.deck-box.four-cards {\n  margin-left: 56%;\n}\n.deck-box.four-cards .deck-card:nth-child(1) {\n  top: 53px;\n  left: -150px;\n  transform: rotate(-8deg);\n}\n.deck-box.four-cards .deck-card:nth-child(1):hover, .deck-box.four-cards .deck-card:nth-child(1).active {\n  transform: rotate(-8deg) scale(1.05);\n}\n.deck-box.four-cards .deck-card:nth-child(2) {\n  top: 45px;\n  left: -300px;\n  transform: rotate(-4deg);\n}\n.deck-box.four-cards .deck-card:nth-child(2):hover, .deck-box.four-cards .deck-card:nth-child(2).active {\n  transform: rotate(-4deg) scale(1.05);\n}\n.deck-box.four-cards .deck-card:nth-child(3) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(4deg);\n}\n.deck-box.four-cards .deck-card:nth-child(3):hover, .deck-box.four-cards .deck-card:nth-child(3).active {\n  transform: rotate(4deg) scale(1.05);\n}\n.deck-box.four-cards .deck-card:nth-child(4) {\n  top: 50px;\n  left: -600px;\n  transform: rotate(10deg);\n}\n.deck-box.four-cards .deck-card:nth-child(4):hover, .deck-box.four-cards .deck-card:nth-child(4).active {\n  transform: rotate(10deg) scale(1.05);\n}\n.deck-box.three-cards {\n  margin-left: 47%;\n}\n.deck-box.three-cards .deck-card:nth-child(1) {\n  top: 45px;\n  left: -150px;\n  transform: rotate(-4deg);\n}\n.deck-box.three-cards .deck-card:nth-child(1):hover, .deck-box.three-cards .deck-card:nth-child(1).active {\n  transform: rotate(-8deg) scale(1.05);\n}\n.deck-box.three-cards .deck-card:nth-child(2) {\n  top: 40px;\n  left: -300px;\n  transform: rotate(0deg);\n}\n.deck-box.three-cards .deck-card:nth-child(2):hover, .deck-box.three-cards .deck-card:nth-child(2).active {\n  transform: rotate(0deg) scale(1.05);\n}\n.deck-box.three-cards .deck-card:nth-child(3) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(8deg);\n}\n.deck-box.three-cards .deck-card:nth-child(3):hover, .deck-box.three-cards .deck-card:nth-child(3).active {\n  transform: rotate(8deg) scale(1.05);\n}\n.deck-box.two-cards {\n  margin-left: 57%;\n}\n.deck-box.two-cards .deck-card:nth-child(1) {\n  top: 45px;\n  left: -300px;\n  transform: rotate(-4deg);\n}\n.deck-box.two-cards .deck-card:nth-child(1):hover, .deck-box.two-cards .deck-card:nth-child(1).active {\n  transform: rotate(-4deg) scale(1.05);\n}\n.deck-box.two-cards .deck-card:nth-child(2) {\n  top: 45px;\n  left: -450px;\n  transform: rotate(4deg);\n}\n.deck-box.two-cards .deck-card:nth-child(2):hover, .deck-box.two-cards .deck-card:nth-child(2).active {\n  transform: rotate(4deg) scale(1.05);\n}\n.deck-box.one-cards {\n  margin-left: 45%;\n}\n.deck-box.one-cards .deck-card:nth-child(1) {\n  top: 45px;\n  left: -300px;\n  transform: rotate(0deg);\n}\n.deck-box.one-cards .deck-card:nth-child(1):hover, .deck-box.one-cards .deck-card:nth-child(1).active {\n  transform: rotate(0deg) scale(1.05);\n}", ""]);
 
 // exports
 
@@ -38528,12 +38663,18 @@ var render = function() {
           player: _vm.player,
           boardData: _vm.boardData,
           board: _vm.board,
-          deck: _vm.deck
+          deck: _vm.decks[_vm.player.color],
+          helpers: _vm.helpers
         }
       }),
       _vm._v(" "),
       _c("deckBox", {
-        attrs: { player: _vm.player, board: _vm.board, deck: _vm.deck }
+        attrs: {
+          player: _vm.player,
+          board: _vm.board,
+          deck: _vm.decks[_vm.player.color],
+          helpers: _vm.helpers
+        }
       })
     ],
     1
@@ -38565,7 +38706,7 @@ var render = function() {
     _c(
       "svg",
       {
-        class: "player_" + _vm.player.color[0],
+        class: "player_" + _vm.player.color,
         attrs: {
           width: "100%",
           height: "100%",
@@ -38670,39 +38811,57 @@ var render = function() {
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _c("div", { staticClass: "d-flex justify-content-center" }, [
-    _c(
-      "div",
-      {
-        staticClass: "deck-box",
-        class: {
-          "six-cards": _vm.deck.cards.length >= 6,
-          "five-cards": _vm.deck.cards.length === 5,
-          "four-cards": _vm.deck.cards.length === 4,
-          "three-cards": _vm.deck.cards.length === 3,
-          "two-cards": _vm.deck.cards.length === 2,
-          "one-cards": _vm.deck.cards.length === 1
-        }
-      },
-      _vm._l(_vm.deck.cards, function(card, index) {
-        return _c("img", {
-          staticClass: "deck-card",
-          class: {
-            active: _vm.deck.picked != null && _vm.deck.picked.id === card.id
+    _vm.deck.cards.length > 0
+      ? _c(
+          "div",
+          {
+            staticClass: "deck-box",
+            class: {
+              "six-cards": _vm.deck.cards.length >= 6,
+              "five-cards": _vm.deck.cards.length === 5,
+              "four-cards": _vm.deck.cards.length === 4,
+              "three-cards": _vm.deck.cards.length === 3,
+              "two-cards": _vm.deck.cards.length === 2,
+              "one-cards": _vm.deck.cards.length === 1
+            }
           },
-          attrs: {
-            id: "card-" + card.id,
-            src: "images/cards/" + card.id + ".png",
-            alt: "cardMissing: " + card.id
-          },
+          _vm._l(_vm.deck.cards, function(card, index) {
+            return _c("img", {
+              staticClass: "deck-card",
+              class: {
+                active:
+                  _vm.deck.picked != null && _vm.deck.picked.id === card.id
+              },
+              attrs: {
+                id: "card-" + card.id,
+                src: "images/cards/" + card.id + ".png",
+                alt: "cardMissing: " + card.id
+              },
+              on: {
+                click: function($event) {
+                  return _vm.pickCard(card)
+                }
+              }
+            })
+          }),
+          0
+        )
+      : _vm._e(),
+    _vm._v(" "),
+    _c("div", { staticClass: "actions" }, [
+      _c(
+        "button",
+        {
+          attrs: { type: "button", name: "button" },
           on: {
             click: function($event) {
-              return _vm.pickCard(card)
+              return _vm.cantMove()
             }
           }
-        })
-      }),
-      0
-    )
+        },
+        [_vm._v("Can't Move!")]
+      )
+    ])
   ])
 }
 var staticRenderFns = []
@@ -52534,6 +52693,459 @@ exports.getBoardDataCoords = function () {
   boardData[76].customClass = "home_pinhole blue_home-4";
   return boardData;
 };
+
+/***/ }),
+
+/***/ "./resources/js/components/data/deck.js":
+/*!**********************************************!*\
+  !*** ./resources/js/components/data/deck.js ***!
+  \**********************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony default export */ __webpack_exports__["default"] = ([{
+  id: "joker",
+  value: 'J',
+  moves: ['all']
+}, {
+  id: "joker",
+  value: 'J',
+  moves: ['all']
+}, {
+  id: "joker",
+  value: 'J',
+  moves: ['all']
+}, {
+  id: "spades_ace",
+  value: 'A',
+  moves: ['out', 1, 11]
+}, {
+  id: "spades_king",
+  value: 'K',
+  moves: ['out', 13]
+}, {
+  id: "spades_queen",
+  value: 'Q',
+  moves: [12]
+}, {
+  id: "spades_jack",
+  value: 'B',
+  moves: ['swap']
+}, {
+  id: "spades_ten",
+  value: '10',
+  moves: [10]
+}, {
+  id: "spades_nine",
+  value: '9',
+  moves: [9]
+}, {
+  id: "spades_eight",
+  value: '8',
+  moves: [8]
+}, {
+  id: "spades_seven",
+  value: '7',
+  moves: [1, 2, 3, 4, 5, 6, 7]
+}, {
+  id: "spades_six",
+  value: '6',
+  moves: [6]
+}, {
+  id: "spades_five",
+  value: '5',
+  moves: [5]
+}, {
+  id: "spades_four",
+  value: '4',
+  moves: [-4, 4]
+}, {
+  id: "spades_three",
+  value: '3',
+  moves: [3]
+}, {
+  id: "spades_two",
+  value: '2',
+  moves: [2]
+}, {
+  id: "hearts_ace",
+  value: 'A',
+  moves: ['out', 1, 11]
+}, {
+  id: "hearts_king",
+  value: 'K',
+  moves: ['out', 13]
+}, {
+  id: "hearts_queen",
+  value: 'Q',
+  moves: [12]
+}, {
+  id: "hearts_jack",
+  value: 'B',
+  moves: ['swap']
+}, {
+  id: "hearts_ten",
+  value: '10',
+  moves: [10]
+}, {
+  id: "hearts_nine",
+  value: '9',
+  moves: [9]
+}, {
+  id: "hearts_eight",
+  value: '8',
+  moves: [8]
+}, {
+  id: "hearts_seven",
+  value: '7',
+  moves: [1, 2, 3, 4, 5, 6, 7]
+}, {
+  id: "hearts_six",
+  value: '6',
+  moves: [6]
+}, {
+  id: "hearts_five",
+  value: '5',
+  moves: [5]
+}, {
+  id: "hearts_four",
+  value: '4',
+  moves: [-4, 4]
+}, {
+  id: "hearts_three",
+  value: '3',
+  moves: [3]
+}, {
+  id: "hearts_two",
+  value: '2',
+  moves: [2]
+}, {
+  id: "clubs_ace",
+  value: 'A',
+  moves: ['out', 1, 11]
+}, {
+  id: "clubs_king",
+  value: 'K',
+  moves: ['out', 13]
+}, {
+  id: "clubs_queen",
+  value: 'Q',
+  moves: [12]
+}, {
+  id: "clubs_jack",
+  value: 'B',
+  moves: ['swap']
+}, {
+  id: "clubs_ten",
+  value: '10',
+  moves: [10]
+}, {
+  id: "clubs_nine",
+  value: '9',
+  moves: [9]
+}, {
+  id: "clubs_eight",
+  value: '8',
+  moves: [8]
+}, {
+  id: "clubs_seven",
+  value: '7',
+  moves: [1, 2, 3, 4, 5, 6, 7]
+}, {
+  id: "clubs_six",
+  value: '6',
+  moves: [6]
+}, {
+  id: "clubs_five",
+  value: '5',
+  moves: [5]
+}, {
+  id: "clubs_four",
+  value: '4',
+  moves: [-4, 4]
+}, {
+  id: "clubs_three",
+  value: '3',
+  moves: [3]
+}, {
+  id: "clubs_two",
+  value: '2',
+  moves: [2]
+}, {
+  id: "diamonds_ace",
+  value: 'A',
+  moves: ['out', 1, 11]
+}, {
+  id: "diamonds_king",
+  value: 'K',
+  moves: ['out', 13]
+}, {
+  id: "diamonds_queen",
+  value: 'Q',
+  moves: [12]
+}, {
+  id: "diamonds_jack",
+  value: 'B',
+  moves: ['swap']
+}, {
+  id: "diamonds_ten",
+  value: '10',
+  moves: [10]
+}, {
+  id: "diamonds_nine",
+  value: '9',
+  moves: [9]
+}, {
+  id: "diamonds_eight",
+  value: '8',
+  moves: [8]
+}, {
+  id: "diamonds_seven",
+  value: '7',
+  moves: [1, 2, 3, 4, 5, 6, 7]
+}, {
+  id: "diamonds_six",
+  value: '6',
+  moves: [6]
+}, {
+  id: "diamonds_five",
+  value: '5',
+  moves: [5]
+}, {
+  id: "diamonds_four",
+  value: '4',
+  moves: [-4, 4]
+}, {
+  id: "diamonds_three",
+  value: '3',
+  moves: [3]
+}, {
+  id: "diamonds_two",
+  value: '2',
+  moves: [2]
+}, {
+  id: "joker",
+  value: 'J',
+  moves: ['all']
+}, {
+  id: "joker",
+  value: 'J',
+  moves: ['all']
+}, {
+  id: "joker",
+  value: 'J',
+  moves: ['all']
+}, {
+  id: "spades_ace",
+  value: 'A',
+  moves: ['out', 1, 11]
+}, {
+  id: "spades_king",
+  value: 'K',
+  moves: ['out', 13]
+}, {
+  id: "spades_queen",
+  value: 'Q',
+  moves: [12]
+}, {
+  id: "spades_jack",
+  value: 'B',
+  moves: ['swap']
+}, {
+  id: "spades_ten",
+  value: '10',
+  moves: [10]
+}, {
+  id: "spades_nine",
+  value: '9',
+  moves: [9]
+}, {
+  id: "spades_eight",
+  value: '8',
+  moves: [8]
+}, {
+  id: "spades_seven",
+  value: '7',
+  moves: [1, 2, 3, 4, 5, 6, 7]
+}, {
+  id: "spades_six",
+  value: '6',
+  moves: [6]
+}, {
+  id: "spades_five",
+  value: '5',
+  moves: [5]
+}, {
+  id: "spades_four",
+  value: '4',
+  moves: [-4, 4]
+}, {
+  id: "spades_three",
+  value: '3',
+  moves: [3]
+}, {
+  id: "spades_two",
+  value: '2',
+  moves: [2]
+}, {
+  id: "hearts_ace",
+  value: 'A',
+  moves: ['out', 1, 11]
+}, {
+  id: "hearts_king",
+  value: 'K',
+  moves: ['out', 13]
+}, {
+  id: "hearts_queen",
+  value: 'Q',
+  moves: [12]
+}, {
+  id: "hearts_jack",
+  value: 'B',
+  moves: ['swap']
+}, {
+  id: "hearts_ten",
+  value: '10',
+  moves: [10]
+}, {
+  id: "hearts_nine",
+  value: '9',
+  moves: [9]
+}, {
+  id: "hearts_eight",
+  value: '8',
+  moves: [8]
+}, {
+  id: "hearts_seven",
+  value: '7',
+  moves: [1, 2, 3, 4, 5, 6, 7]
+}, {
+  id: "hearts_six",
+  value: '6',
+  moves: [6]
+}, {
+  id: "hearts_five",
+  value: '5',
+  moves: [5]
+}, {
+  id: "hearts_four",
+  value: '4',
+  moves: [-4, 4]
+}, {
+  id: "hearts_three",
+  value: '3',
+  moves: [3]
+}, {
+  id: "hearts_two",
+  value: '2',
+  moves: [2]
+}, {
+  id: "clubs_ace",
+  value: 'A',
+  moves: ['out', 1, 11]
+}, {
+  id: "clubs_king",
+  value: 'K',
+  moves: ['out', 13]
+}, {
+  id: "clubs_queen",
+  value: 'Q',
+  moves: [12]
+}, {
+  id: "clubs_jack",
+  value: 'B',
+  moves: ['swap']
+}, {
+  id: "clubs_ten",
+  value: '10',
+  moves: [10]
+}, {
+  id: "clubs_nine",
+  value: '9',
+  moves: [9]
+}, {
+  id: "clubs_eight",
+  value: '8',
+  moves: [8]
+}, {
+  id: "clubs_seven",
+  value: '7',
+  moves: [1, 2, 3, 4, 5, 6, 7]
+}, {
+  id: "clubs_six",
+  value: '6',
+  moves: [6]
+}, {
+  id: "clubs_five",
+  value: '5',
+  moves: [5]
+}, {
+  id: "clubs_four",
+  value: '4',
+  moves: [-4, 4]
+}, {
+  id: "clubs_three",
+  value: '3',
+  moves: [3]
+}, {
+  id: "clubs_two",
+  value: '2',
+  moves: [2]
+}, {
+  id: "diamonds_ace",
+  value: 'A',
+  moves: ['out', 1, 11]
+}, {
+  id: "diamonds_king",
+  value: 'K',
+  moves: ['out', 13]
+}, {
+  id: "diamonds_queen",
+  value: 'Q',
+  moves: [12]
+}, {
+  id: "diamonds_jack",
+  value: 'B',
+  moves: ['swap']
+}, {
+  id: "diamonds_ten",
+  value: '10',
+  moves: [10]
+}, {
+  id: "diamonds_nine",
+  value: '9',
+  moves: [9]
+}, {
+  id: "diamonds_eight",
+  value: '8',
+  moves: [8]
+}, {
+  id: "diamonds_seven",
+  value: '7',
+  moves: [1, 2, 3, 4, 5, 6, 7]
+}, {
+  id: "diamonds_six",
+  value: '6',
+  moves: [6]
+}, {
+  id: "diamonds_five",
+  value: '5',
+  moves: [5]
+}, {
+  id: "diamonds_four",
+  value: '4',
+  moves: [-4, 4]
+}, {
+  id: "diamonds_three",
+  value: '3',
+  moves: [3]
+}, {
+  id: "diamonds_two",
+  value: '2',
+  moves: [2]
+}]);
 
 /***/ }),
 
